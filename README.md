@@ -37,21 +37,23 @@ agent-browser install
 
 ### 3. Authenticate with VirtuaGym
 
-First-time setup requires a manual login (for CAPTCHA handling):
+VirtuaGym requires a one-time manual login because the signin page uses CAPTCHA which cannot be solved automatically. The `--headed` flag opens a visible browser window so you can complete the login yourself:
 
 ```bash
 agent-browser --headed open https://thriveandconquer.virtuagym.com/signin
-# Log in manually in the browser window
+# Log in manually and solve CAPTCHA if prompted
 agent-browser state save ./virtuagym-auth.json
 ```
 
-This creates `virtuagym-auth.json` in the project root. This file contains session cookies and is **gitignored** — each developer must create their own locally.
+This creates `virtuagym-auth.json` which caches your session cookies. The auth state persists for an extended period — all future runs are fully headless with no browser window needed.
 
-All future runs are fully headless using the saved auth state.
+This file is **gitignored** — each user must create their own locally.
+
+> **Note:** VirtuaGym does not offer a public API — web scraping via agent-browser is the only extraction method available without a business account.
 
 ### 4. Refresh auth (if expired)
 
-Re-run the headed login and save state again:
+If your session eventually expires, re-run the headed login:
 
 ```bash
 agent-browser --headed open https://thriveandconquer.virtuagym.com/signin

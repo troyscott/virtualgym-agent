@@ -1,12 +1,15 @@
 # Auth state (contains session cookies)
 virtuagym-auth.json
 
-# Generated output
-data/
-images/
+# Generated output (keep dirs via .gitkeep)
+data/*
+!data/.gitkeep
+images/*
+!images/.gitkeep
 
-# Fonts (downloadable, not source)
-fonts/
+# Fonts (downloadable, keep dir via .gitkeep)
+fonts/*
+!fonts/.gitkeep
 
 # Legacy Cowork/Chrome MCP prompts
 prompts/

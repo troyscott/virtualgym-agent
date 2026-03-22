@@ -7,9 +7,7 @@ data/*
 images/*
 !images/.gitkeep
 
-# Fonts (downloadable, keep dir via .gitkeep)
-fonts/*
-!fonts/.gitkeep
+# Fonts tracked in repo (Poppins, OFL licensed)
 
 # Legacy Cowork/Chrome MCP prompts
 prompts/

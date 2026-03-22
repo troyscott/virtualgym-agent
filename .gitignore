@@ -1,0 +1,19 @@
+# Auth state (contains session cookies)
+virtuagym-auth.json
+
+# Generated output
+data/
+images/
+
+# Fonts (downloadable, not source)
+fonts/
+
+# Legacy Cowork/Chrome MCP prompts
+prompts/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store

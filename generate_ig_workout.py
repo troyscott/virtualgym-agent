@@ -44,15 +44,15 @@ F_WM = font("Light", 13)
 
 
 def vertical_gradient(width, height, top, bot):
-    img = Image.new("RGB", (width, height))
-    pixels = img.load()
-    for y in range(height):
-        r = top[0] + (bot[0] - top[0]) * y // height
-        g = top[1] + (bot[1] - top[1]) * y // height
-        b = top[2] + (bot[2] - top[2]) * y // height
-        for x in range(width):
-            pixels[x, y] = (r, g, b)
-    return img
+    # Build each channel as a grayscale gradient, then merge
+    channels = []
+    for t, b in zip(top, bot):
+        grad = Image.linear_gradient("L")  # 256x256, black-to-white top-to-bottom
+        grad = grad.resize((width, height))
+        # Scale gradient range from 0-255 to t-b
+        grad = grad.point(lambda v: t + (b - t) * v // 255)
+        channels.append(grad)
+    return Image.merge("RGB", channels)
 
 
 def right_align(draw, text, y, font, fill, margin=60):
@@ -133,6 +133,34 @@ def generate_workout_image(json_path, output_path=None):
         "conditioning": (230, 65, 85),
     }
 
+    # Calculate how much vertical space we have for exercises
+    # Reserve 140px for the bottom summary area
+    max_exercise_y = HEIGHT - 160
+    total_sections = sum(1 for s in ["warmup", "strength", "conditioning"] if s in by_type)
+    total_exercises = sum(len(exs) for exs in by_type.values())
+    # Estimate: 38px per section header + 60px per exercise + 12px per section gap
+    estimated_height = total_sections * 38 + total_exercises * 60 + total_sections * 12
+    available = max_exercise_y - y
+
+    # Use compact layout if content would overflow
+    compact = estimated_height > available
+    if compact:
+        f_ex_name = font("Medium", 18)
+        f_ex_detail = font("Light", 15)
+        f_cal = font("Regular", 14)
+        name_step = 24
+        detail_step = 24
+        section_gap = 6
+        section_header_step = 30
+    else:
+        f_ex_name = F_EX_NAME
+        f_ex_detail = F_EX_DETAIL
+        f_cal = F_CAL
+        name_step = 30
+        detail_step = 30
+        section_gap = 12
+        section_header_step = 38
+
     for stype in ["warmup", "strength", "conditioning"]:
         if stype not in by_type:
             continue
@@ -141,16 +169,28 @@ def generate_workout_image(json_path, output_path=None):
         label = stype.upper()
 
         # Section header
-        draw.ellipse([(60, y + 4), (74, y + 18)], fill=color)
-        draw.text((84, y - 2), label, fill=color, font=F_SECTION)
-        y += 38
+        dot_size = 10 if compact else 14
+        draw.ellipse([(60, y + 4), (60 + dot_size, y + 4 + dot_size)], fill=color)
+        draw.text((60 + dot_size + 10, y - 2), label, fill=color,
+                  font=font("Bold", 20) if compact else F_SECTION)
+        y += section_header_step
 
         for ex in by_type[stype]:
+            if y > max_exercise_y:
+                # Truncate remaining exercises
+                remaining = sum(len(by_type.get(s, [])) for s in ["warmup", "strength", "conditioning"]) - total_exercises
+                draw.text((80, y), f"+ more exercises...", fill=MID, font=f_ex_detail)
+                y += detail_step
+                break
+
             # Exercise name (left) + calories (right)
-            draw.text((80, y), ex["name"], fill=WHITE, font=F_EX_NAME)
+            name = ex["name"]
+            if compact and len(name) > 35:
+                name = name[:33] + "…"
+            draw.text((80, y), name, fill=WHITE, font=f_ex_name)
             cal_str = f"{ex['total_calories']} Kcal"
-            right_align(draw, cal_str, y + 3, F_CAL, MID)
-            y += 30
+            right_align(draw, cal_str, y + 3, f_cal, MID)
+            y += name_step
 
             # Set details line
             sets = ex["sets"]
@@ -177,10 +217,10 @@ def generate_workout_image(json_path, output_path=None):
                     else:
                         detail += f"  @ " + " / ".join(str(w) for w in wts) + " lbs"
 
-            draw.text((100, y), detail, fill=LIGHT, font=F_EX_DETAIL)
-            y += 30
+            draw.text((100, y), detail, fill=LIGHT, font=f_ex_detail)
+            y += detail_step
 
-        y += 12  # section gap
+        y += section_gap
 
     # ── BOTTOM SUMMARY ──
     # Push to bottom area

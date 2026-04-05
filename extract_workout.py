@@ -10,6 +10,7 @@ import json
 import sys
 import re
 import os
+import time
 from datetime import datetime, timedelta, timezone
 import shlex
 
@@ -20,24 +21,54 @@ AUTH_FILE = os.path.join(WORKDIR, "virtuagym-auth.json")
 BASE_URL = "https://thriveandconquer.virtuagym.com/user/troys2005/exercise"
 
 
-def run(cmd, timeout=30):
-    """Run an agent-browser command and return stdout."""
-    result = subprocess.run(
-        cmd, shell=True, capture_output=True, text=True, timeout=timeout
-    )
-    return result.stdout.strip()
+def run(cmd, timeout=30, critical=False, retries=0):
+    """Run an agent-browser command and return stdout.
+
+    Args:
+        critical: If True, raise on non-zero exit code.
+        retries: Number of retry attempts on failure (with 2s delay).
+    """
+    for attempt in range(retries + 1):
+        try:
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True, timeout=timeout
+            )
+        except subprocess.TimeoutExpired:
+            print(f"  TIMEOUT: {cmd[:60]}...")
+            if attempt < retries:
+                print(f"  Retrying ({attempt + 1}/{retries})...")
+                time.sleep(2)
+                continue
+            if critical:
+                raise RuntimeError(f"Command timed out after {retries + 1} attempts: {cmd[:60]}")
+            return ""
+
+        if result.returncode != 0:
+            stderr = result.stderr.strip()
+            if stderr:
+                print(f"  STDERR: {stderr[:200]}")
+            if attempt < retries:
+                print(f"  Retrying ({attempt + 1}/{retries})...")
+                time.sleep(2)
+                continue
+            if critical:
+                raise RuntimeError(f"Command failed (exit {result.returncode}): {cmd[:60]}")
+
+        return result.stdout.strip()
+
+    return ""
 
 
 def snapshot_interactive():
-    return run("agent-browser snapshot -i")
+    return run("agent-browser snapshot -i", retries=1)
 
 
 def snapshot_full():
-    return run("agent-browser snapshot")
+    return run("agent-browser snapshot", retries=1)
 
 
 def click_ref(ref):
-    run(f"agent-browser click {shlex.quote(ref)}")
+    run(f"agent-browser click {shlex.quote(ref)}", retries=1)
     run("agent-browser wait 1500")
 
 
@@ -52,11 +83,11 @@ def js_eval(code):
 def navigate_to_date(target_date):
     """Load auth, open calendar, and click the target date."""
     print(f"Loading auth from {AUTH_FILE}")
-    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}")
+    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}", critical=True)
 
     print(f"Opening {BASE_URL}")
-    run(f"agent-browser open {shlex.quote(BASE_URL)}")
-    run("agent-browser wait --load networkidle")
+    run(f"agent-browser open {shlex.quote(BASE_URL)}", critical=True)
+    run("agent-browser wait --load networkidle", critical=True)
 
     # Check which month is displayed and navigate if needed
     snap = snapshot_full()
@@ -393,9 +424,9 @@ def generate_report(data, output_path):
 def find_last_workout_date():
     """Navigate to calendar and find the most recent date with a workout."""
     print("Finding last workout date...")
-    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}")
-    run(f"agent-browser open {shlex.quote(BASE_URL)}")
-    run("agent-browser wait --load networkidle")
+    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}", critical=True)
+    run(f"agent-browser open {shlex.quote(BASE_URL)}", critical=True)
+    run("agent-browser wait --load networkidle", critical=True)
 
     # Use JS to find calendar days that have workout indicators
     js = """

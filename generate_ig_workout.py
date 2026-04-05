@@ -216,5 +216,7 @@ def generate_workout_image(json_path, output_path=None):
 
 
 if __name__ == "__main__":
-    json_file = sys.argv[1] if len(sys.argv) > 1 else "workout_2026-02-06.json"
-    generate_workout_image(json_file)
+    if len(sys.argv) < 2:
+        print("Usage: python3 generate_ig_workout.py <workout_YYYY-MM-DD.json>")
+        sys.exit(1)
+    generate_workout_image(sys.argv[1])

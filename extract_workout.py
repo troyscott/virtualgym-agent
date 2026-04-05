@@ -10,7 +10,8 @@ import json
 import sys
 import re
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import shlex
 
 WORKDIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(WORKDIR, "data")
@@ -36,12 +37,12 @@ def snapshot_full():
 
 
 def click_ref(ref):
-    run(f"agent-browser click {ref}")
+    run(f"agent-browser click {shlex.quote(ref)}")
     run("agent-browser wait 1500")
 
 
 def get_value(ref):
-    return run(f"agent-browser get value {ref}")
+    return run(f"agent-browser get value {shlex.quote(ref)}")
 
 
 def js_eval(code):
@@ -51,10 +52,10 @@ def js_eval(code):
 def navigate_to_date(target_date):
     """Load auth, open calendar, and click the target date."""
     print(f"Loading auth from {AUTH_FILE}")
-    run(f"agent-browser state load {AUTH_FILE}")
+    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}")
 
     print(f"Opening {BASE_URL}")
-    run(f"agent-browser open {BASE_URL}")
+    run(f"agent-browser open {shlex.quote(BASE_URL)}")
     run("agent-browser wait --load networkidle")
 
     # Check which month is displayed and navigate if needed
@@ -79,7 +80,7 @@ def navigate_to_date(target_date):
                 snap_i = snapshot_interactive()
                 prev_match = re.search(r'link \[ref=(e\d+)\]\n.*link \[ref=(e\d+)\].*\n.*StaticText "\w+ \d{4}"', snap_i)
                 if prev_match:
-                    run(f"agent-browser click @{prev_match.group(1)}")
+                    run(f"agent-browser click {shlex.quote('@' + prev_match.group(1))}")
                     run("agent-browser wait 1000")
 
     # Click the target day using JS
@@ -147,7 +148,7 @@ def get_sidebar_overview():
 def extract_exercise_detail(ref, name, order):
     """Click an exercise and read its detail panel."""
     # Scroll into view first, then click
-    run(f"agent-browser scrollintoview @{ref}")
+    run(f"agent-browser scrollintoview {shlex.quote('@' + ref)}")
     run("agent-browser wait 300")
     click_ref(f"@{ref}")
 
@@ -392,8 +393,8 @@ def generate_report(data, output_path):
 def find_last_workout_date():
     """Navigate to calendar and find the most recent date with a workout."""
     print("Finding last workout date...")
-    run(f"agent-browser state load {AUTH_FILE}")
-    run(f"agent-browser open {BASE_URL}")
+    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}")
+    run(f"agent-browser open {shlex.quote(BASE_URL)}")
     run("agent-browser wait --load networkidle")
 
     # Use JS to find calendar days that have workout indicators
@@ -549,7 +550,7 @@ def main():
         "day_of_week": day_name,
         "workout_title": workout_title,
         "total_exercises": len(exercises),
-        "extraction_timestamp": datetime.utcnow().isoformat() + "Z",
+        "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
         "source": "thriveandconquer.virtuagym.com",
         "activity": None,
         "additional_activities": [],

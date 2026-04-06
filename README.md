@@ -1,5 +1,11 @@
 # virtualgym-agent
 
+![Version](https://img.shields.io/badge/version-0.2-blue)
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![License](https://img.shields.io/github/license/troyscott/virtualgym-agent)
+![Issues](https://img.shields.io/github/issues/troyscott/virtualgym-agent)
+![PRs](https://img.shields.io/github/issues-pr/troyscott/virtualgym-agent)
+
 Automated workout data extraction from [VirtuaGym](https://virtuagym.com) using Vercel's [agent-browser](https://github.com/vercel-labs/agent-browser). Extracts exercises, sets, reps, and weights — then generates structured JSON, text reports, and Instagram-ready images (1080x1350).
 
 Works standalone via CLI, or integrated with Claude Channels, OpenClaw, and other AI agent frameworks.

@@ -63,6 +63,27 @@ agent-browser state save ./virtuagym-auth.json
 agent-browser state load ./virtuagym-auth.json
 ```
 
+### CAPTCHA workaround (Chrome profile reuse)
+
+VirtuaGym fingerprints the browser and serves an aggressive, looping CAPTCHA to fresh Chromium instances launched by `agent-browser`. Saved-password autofill won't help — the CAPTCHA fires before submit. To get past it, reuse a real Chrome profile so the site sees your existing fingerprint, history, and extensions:
+
+```bash
+# 1. List your local Chrome profiles
+agent-browser profiles
+
+# 2. Fully QUIT Chrome (Cmd+Q) — a profile can't be open in two browsers at once
+# 3. Launch agent-browser with that profile and sign in once in the headed window
+agent-browser close --all
+agent-browser --headed --profile "Profile 2" open https://thriveandconquer.virtuagym.com/signin
+# (sign in manually — your Chrome password manager will autofill)
+
+# 4. Save fresh state and shut down
+agent-browser state save ./virtuagym-auth.json
+agent-browser close --all
+```
+
+Once `virtuagym-auth.json` is fresh, `extract_workout.py` runs headless against the saved state without needing the profile again — until the session expires (~30 days).
+
 ## Extraction Workflow
 
 The `extract_workout.py` script automates the full pipeline:

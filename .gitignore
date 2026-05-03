@@ -1,6 +1,9 @@
 # Auth state (contains session cookies)
 virtuagym-auth.json
 
+# Environment variables (contains secrets)
+.env
+
 # Generated output (keep dirs via .gitkeep)
 data/*
 !data/.gitkeep

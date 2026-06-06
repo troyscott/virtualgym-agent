@@ -577,6 +577,19 @@ def main():
         sets_desc = f"{len(detail['sets'])} sets"
         print(f"{sets_desc}, {detail['total_calories']} Kcal")
 
+    # Drop VirtuaGym session "activity" rows (e.g. "Fitness, strength training/
+    # bodybuilding"). These aren't exercises and have no detail panel of their
+    # own, so the click-through reads stale set/calorie values from the previous
+    # exercise — inflating volume, calories, and counts. Remove them after the
+    # loop so per-order classification of the real exercises is unaffected.
+    def is_activity_row(name):
+        return name.strip().lower().startswith("fitness,")
+
+    dropped = [e for e in exercises if is_activity_row(e["name"])]
+    for e in dropped:
+        print(f"  Dropping activity row (not an exercise): {e['name']}")
+    exercises = [e for e in exercises if not is_activity_row(e["name"])]
+
     # Step 4: Calculate volume
     total_volume, volume_breakdown = calculate_volume(exercises)
 

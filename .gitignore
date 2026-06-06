@@ -7,6 +7,9 @@ data/*
 images/*
 !images/.gitkeep
 
+# launchd job logs
+logs/
+
 # Fonts tracked in repo (Poppins, OFL licensed)
 
 # Legacy Cowork/Chrome MCP prompts

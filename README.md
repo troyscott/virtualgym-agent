@@ -104,6 +104,20 @@ python3 extract_workout.py yesterday
 python3 extract_workout.py "Mar 21"
 ```
 
+### Run from your phone (Cowork Dispatch)
+
+`extract.sh` wraps the command so it works from a single entry point, and the extraction can be
+registered as an on-demand launchd job and triggered/monitored via `launchctl` — ideal for Cowork
+Dispatch, which runs locally on the Mac and so can reach the Chrome profile + `localhost:9222`:
+
+```bash
+./extract.sh                   # most recent workout
+scripts/launchd.sh install     # register the on-demand launchd job (one-time)
+scripts/launchd.sh run-now     # trigger it; logs -> logs/extract.{out,err}.log
+scripts/launchd.sh status      # load state / last exit code
+scripts/launchd.sh logs        # tail recent output
+```
+
 The script will:
 1. Load saved auth and open the VirtuaGym Activity Calendar
 2. Navigate to the target date

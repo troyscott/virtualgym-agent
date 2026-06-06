@@ -66,8 +66,9 @@ python3 browser_session.py --login
 # profile headless, connects via `agent-browser connect 9222`, and verifies login.
 ```
 
-Env overrides (optional): `CHROME_BIN`, `CHROME_PROFILE_DIR` (default `~/.virtuagym-chrome`),
-`CDP_PORT` (default `9222`).
+Config lives in `config.json` (committed, no secrets); resolution is env var > `config.json` >
+default. Keys: `CHROME_BIN`, `CHROME_PROFILE_DIR` (default `~/.virtuagym-chrome`), `CDP_PORT`
+(default `9222`), plus the VirtuaGym URLs / Google account.
 
 ## Extraction Workflow
 

@@ -65,13 +65,17 @@ connect automatically — no browser window, no manual step.
 
 #### Optional configuration
 
-`browser_session.py` reads these environment variables (all optional, sensible defaults shown):
+Settings live in `config.json` (committed, no secrets). Each value resolves as
+**environment variable > `config.json` > built-in default**, so you can override any of them per-run
+with an env var without editing the file.
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
+| Key | Default | Purpose |
+|-----|---------|---------|
 | `CHROME_BIN` | `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` | Chrome executable |
 | `CHROME_PROFILE_DIR` | `~/.virtuagym-chrome` | Dedicated automation profile |
 | `CDP_PORT` | `9222` | Remote debugging port |
+| `VIRTUAGYM_SIGNIN_URL` / `VIRTUAGYM_CALENDAR_URL` | thriveandconquer.virtuagym.com URLs | VirtuaGym endpoints |
+| `VIRTUAGYM_GOOGLE_ACCOUNT` | `troys2005@gmail.com` | Account shown in the sign-in prompt |
 
 ### 4. Refresh auth (if expired)
 

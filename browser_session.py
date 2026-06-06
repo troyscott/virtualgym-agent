@@ -19,31 +19,51 @@ Usage:
 
 import os
 import sys
+import json
 import time
 import shlex
 import subprocess
 import urllib.request
 import urllib.error
 
-# --- Config (env-overridable) ------------------------------------------------
+# --- Config ------------------------------------------------------------------
+# Values resolve in this order: environment variable > config.json > default.
+# config.json lives next to this file and holds no secrets (safe to commit).
 
-CHROME_BIN = os.environ.get(
-    "CHROME_BIN",
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-)
-PROFILE_DIR = os.path.expanduser(
-    os.environ.get("CHROME_PROFILE_DIR", "~/.virtuagym-chrome")
-)
-DEBUG_PORT = int(os.environ.get("CDP_PORT", "9222"))
+WORKDIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(WORKDIR, "config.json")
 
-SIGNIN_URL = os.environ.get(
+
+def _load_config():
+    try:
+        with open(CONFIG_FILE) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+_CFG = _load_config()
+
+
+def _cfg(key, default):
+    """Resolve a setting: env var wins, then config.json, then default."""
+    return os.environ.get(key, _CFG.get(key, default))
+
+
+CHROME_BIN = _cfg(
+    "CHROME_BIN", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+)
+PROFILE_DIR = os.path.expanduser(_cfg("CHROME_PROFILE_DIR", "~/.virtuagym-chrome"))
+DEBUG_PORT = int(_cfg("CDP_PORT", 9222))
+
+SIGNIN_URL = _cfg(
     "VIRTUAGYM_SIGNIN_URL", "https://thriveandconquer.virtuagym.com/signin"
 )
-CALENDAR_URL = os.environ.get(
+CALENDAR_URL = _cfg(
     "VIRTUAGYM_CALENDAR_URL",
     "https://thriveandconquer.virtuagym.com/user/troys2005/exercise",
 )
-GOOGLE_ACCOUNT = os.environ.get("VIRTUAGYM_GOOGLE_ACCOUNT", "troys2005@gmail.com")
+GOOGLE_ACCOUNT = _cfg("VIRTUAGYM_GOOGLE_ACCOUNT", "troys2005@gmail.com")
 
 # How long to poll for the CDP endpoint / a completed login.
 CDP_WAIT_SECONDS = 20

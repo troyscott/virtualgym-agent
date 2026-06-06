@@ -43,27 +43,43 @@ agent-browser install
 
 ### 3. Authenticate with VirtuaGym
 
-VirtuaGym requires a one-time manual login because the signin page uses CAPTCHA which cannot be solved automatically. The `--headed` flag opens a visible browser window so you can complete the login yourself:
+Authentication uses a **dedicated, persistent Chrome profile** driven over CDP (Chrome DevTools
+Protocol). You sign in once via "Sign in with Google"; the live profile keeps its Google SSO
+refreshed, so re-login is rare. (This replaces the old `virtuagym-auth.json` cookie snapshot, which
+expired roughly every 30 days.)
 
 ```bash
-agent-browser --headed open https://thriveandconquer.virtuagym.com/signin
-# Log in manually and solve CAPTCHA if prompted
-agent-browser state save ./virtuagym-auth.json
+python3 browser_session.py --login
+# A visible Chrome window opens — choose "Sign in with Google" as your VirtuaGym account
 ```
 
-This creates `virtuagym-auth.json` which caches your session cookies. The auth state persists for an extended period — all future runs are fully headless with no browser window needed.
+This creates a profile at `~/.virtuagym-chrome`. All future runs launch that profile **headless** and
+connect automatically — no browser window, no manual step.
 
-This file is **gitignored** — each user must create their own locally.
+> **Why a separate profile?** Chrome 136+ refuses to enable remote debugging on your normal default
+> profile, so automation requires its own `--user-data-dir`. The profile lives outside the repo and is
+> never committed.
 
-> **Note:** VirtuaGym does not offer a public API — web scraping via agent-browser is the only extraction method available without a business account.
+> **Note:** VirtuaGym does not offer a public API — web scraping via agent-browser is the only
+> extraction method available without a business account.
+
+#### Optional configuration
+
+`browser_session.py` reads these environment variables (all optional, sensible defaults shown):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CHROME_BIN` | `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` | Chrome executable |
+| `CHROME_PROFILE_DIR` | `~/.virtuagym-chrome` | Dedicated automation profile |
+| `CDP_PORT` | `9222` | Remote debugging port |
 
 ### 4. Refresh auth (if expired)
 
-If your session eventually expires, re-run the headed login:
+If the session ever dies, runs detect it and automatically open a headed window for you to sign in
+again. You can also trigger the one-time login manually:
 
 ```bash
-agent-browser --headed open https://thriveandconquer.virtuagym.com/signin
-agent-browser state save ./virtuagym-auth.json
+python3 browser_session.py --login
 ```
 
 ## Usage
@@ -106,8 +122,8 @@ workouts/
 ├── CLAUDE.md                 # Claude Code project context
 ├── requirements.txt          # Python dependencies (pip)
 ├── extract_workout.py        # Main extraction script (agent-browser)
+├── browser_session.py        # Persistent Chrome profile + CDP connect/login
 ├── generate_ig_workout.py    # Pillow-based IG image generator
-├── virtuagym-auth.json       # Saved auth state (do not commit)
 ├── fonts/                    # Poppins font files for image generation
 ├── data/                     # JSON reports and text summaries (gitignored)
 └── images/                   # Generated Instagram images (gitignored)

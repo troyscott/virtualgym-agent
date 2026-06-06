@@ -14,6 +14,8 @@ import time
 from datetime import datetime, timedelta, timezone
 import shlex
 
+from browser_session import ensure_connected
+
 WORKDIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(WORKDIR, "data")
 IMAGES_DIR = os.path.join(WORKDIR, "images")
@@ -81,9 +83,8 @@ def js_eval(code):
 
 
 def navigate_to_date(target_date):
-    """Load auth, open calendar, and click the target date."""
-    print(f"Loading auth from {AUTH_FILE}")
-    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}", critical=True)
+    """Connect to the persistent browser, open calendar, and click the target date."""
+    ensure_connected()
 
     print(f"Opening {BASE_URL}")
     run(f"agent-browser open {shlex.quote(BASE_URL)}", critical=True)
@@ -424,7 +425,7 @@ def generate_report(data, output_path):
 def find_last_workout_date():
     """Navigate to calendar and find the most recent date with a workout."""
     print("Finding last workout date...")
-    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}", critical=True)
+    ensure_connected()
     run(f"agent-browser open {shlex.quote(BASE_URL)}", critical=True)
     run("agent-browser wait --load networkidle", critical=True)
 

@@ -1,6 +1,10 @@
 # Auth state (contains session cookies)
 virtuagym-auth.json
 
+# Local env secrets (keep .env.example as the trackable template)
+.env
+!.env.example
+
 # Generated output (keep dirs via .gitkeep)
 data/*
 !data/.gitkeep

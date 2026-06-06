@@ -95,6 +95,12 @@ scripts/launchd.sh logs [N]    # tail logs (default 40 lines) -> logs/extract.{o
 scripts/launchd.sh uninstall
 ```
 
+**Status dashboard (live artifact):** `scripts/status.py` emits JSON for every `com.troyscott.*`
+launchd job (load state, last exit code, last run, log tail) plus the latest workout summary.
+`scripts/dashboard.sh` injects that JSON into `scripts/dashboard.html` and writes a self-contained
+`logs/dashboard.html` — open it, send it to the phone, or surface it as a Cowork live artifact.
+Re-run `dashboard.sh` (via Dispatch) to refresh; the artifact displays, Dispatch executes.
+
 **Phone recipe:** dispatch something like *"In virtualgym-agent, run `scripts/launchd.sh run-now`,
 then `scripts/launchd.sh logs` until it prints Done!, and send me `images/workout_<date>_ig.png`."*
 

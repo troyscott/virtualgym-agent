@@ -10,6 +10,8 @@ Automated workout data extraction from [VirtuaGym](https://virtuagym.com) using 
 
 Works standalone via CLI, or integrated with Claude Channels, OpenClaw, and other AI agent frameworks.
 
+> **How it all fits together:** see [ARCHITECTURE.md](ARCHITECTURE.md) for the system design, data flow, and the rationale behind the phone-triggered (Cowork Dispatch → launchd) automation.
+
 ## Prerequisites
 
 - Python 3.x

@@ -1,0 +1,8 @@
+{
+  "CHROME_BIN": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "CHROME_PROFILE_DIR": "~/.virtuagym-chrome",
+  "CDP_PORT": 9222,
+  "VIRTUAGYM_SIGNIN_URL": "https://thriveandconquer.virtuagym.com/signin",
+  "VIRTUAGYM_CALENDAR_URL": "https://thriveandconquer.virtuagym.com/user/troys2005/exercise",
+  "VIRTUAGYM_GOOGLE_ACCOUNT": "troys2005@gmail.com"
+}

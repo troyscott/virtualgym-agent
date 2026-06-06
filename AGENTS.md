@@ -145,3 +145,5 @@ Two alternating programs, typically 2-3x/week:
 - **Exercise detail not loading**: Script waits 1.5s after each click; increase if needed
 - **Sidebar not scrolling**: Script uses `scrollintoview` before clicking each exercise
 - **Volume mismatch**: Verify time-based exercises use seconds x weight
+
+## Imported Claude Cowork project instructions

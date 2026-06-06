@@ -14,6 +14,8 @@ import time
 from datetime import datetime, timedelta, timezone
 import shlex
 
+from browser_session import ensure_connected
+
 WORKDIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(WORKDIR, "data")
 IMAGES_DIR = os.path.join(WORKDIR, "images")
@@ -77,13 +79,17 @@ def get_value(ref):
 
 
 def js_eval(code):
-    return run(f"agent-browser eval --stdin <<'EVALEOF'\n{code}\nEVALEOF")
+    # Wrap in an IIFE so top-level `const`/`let` are scoped per call. agent-browser
+    # evaluates in a persistent context, so bare top-level declarations would
+    # collide ("Identifier already declared") on repeated calls. The code body
+    # must `return` its value.
+    wrapped = "(() => {\n" + code + "\n})()"
+    return run(f"agent-browser eval --stdin <<'EVALEOF'\n{wrapped}\nEVALEOF")
 
 
 def navigate_to_date(target_date):
-    """Load auth, open calendar, and click the target date."""
-    print(f"Loading auth from {AUTH_FILE}")
-    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}", critical=True)
+    """Connect to the persistent browser, open calendar, and click the target date."""
+    ensure_connected()
 
     print(f"Opening {BASE_URL}")
     run(f"agent-browser open {shlex.quote(BASE_URL)}", critical=True)
@@ -130,7 +136,7 @@ def navigate_to_date(target_date):
         }}
       }}
     }}
-    JSON.stringify({{clicked}});
+    return {{clicked}};
     """
     result = js_eval(js)
     print(f"Clicked date {target_date.strftime('%B %d')}: {result}")
@@ -424,7 +430,7 @@ def generate_report(data, output_path):
 def find_last_workout_date():
     """Navigate to calendar and find the most recent date with a workout."""
     print("Finding last workout date...")
-    run(f"agent-browser state load {shlex.quote(AUTH_FILE)}", critical=True)
+    ensure_connected()
     run(f"agent-browser open {shlex.quote(BASE_URL)}", critical=True)
     run("agent-browser wait --load networkidle", critical=True)
 
@@ -444,11 +450,15 @@ def find_last_workout_date():
         });
       }
     }
-    JSON.stringify(results);
+    return results;
     """
     result = js_eval(js)
     try:
         days_info = json.loads(result)
+        # agent-browser pretty-prints raw return values; a stringified result
+        # (legacy) decodes to a str and needs a second pass.
+        if isinstance(days_info, str):
+            days_info = json.loads(days_info)
     except (json.JSONDecodeError, TypeError):
         days_info = []
 
@@ -486,7 +496,7 @@ def find_last_workout_date():
             }}
           }}
         }}
-        JSON.stringify({{clicked: true}});
+        return {{clicked: true}};
         """
         js_eval(test_js)
         run("agent-browser wait 2000")

@@ -72,37 +72,54 @@ default. Keys: `CHROME_BIN`, `CHROME_PROFILE_DIR` (default `~/.virtuagym-chrome`
 
 ## Running from iPhone (Cowork Dispatch)
 
-Dispatch executes **on this Mac mini** (the phone is just the remote control), so it has full
-access to the local Chrome profile and `localhost:9222` — unlike cloud agents/routines, which are
-isolated and cannot run this workflow.
+Dispatch sessions run on this Mac mini, but their shell is a **sandboxed Linux VM**: no
+`launchctl`, no macOS binaries, and the network allowlist blocks `localhost:9222`. What the
+sandbox DOES have is a **read/write mount of this repo**. The bridge is launchd's `WatchPaths`:
+the job watches `.dispatch-trigger`, so any write to that file — including one made through the
+Cowork mount — fires the extraction natively on the Mac.
 
-`extract.sh` is the single command both the phone and launchd use:
+```
+phone → Dispatch (sandbox) → write .dispatch-trigger → launchd (Mac) → extract.sh → tail logs/ via mount
+```
+
+`extract.sh` is the single entry point for terminal and launchd use:
 
 ```bash
-./extract.sh            # most recent workout (default)
+./extract.sh                  # most recent workout (default)
 ./extract.sh today
 ./extract.sh 2026-06-05
+./extract.sh --from-trigger   # launchd entry point: reads the date arg from .dispatch-trigger
 ```
 
-The extraction is registered as an **on-demand launchd job** (no timer) so it can be triggered and
-monitored via `launchctl` — the natural surface for Dispatch and for a status artifact:
+`scripts/launchd.sh` subcommands, by where they can run:
 
 ```bash
-scripts/launchd.sh install     # register the job (one-time)
-scripts/launchd.sh run-now     # trigger an extraction (launchctl kickstart)
+# Sandbox-safe (pure file I/O — works from Cowork Dispatch)
+scripts/launchd.sh trigger [last|today|YYYY-MM-DD]   # write .dispatch-trigger -> launchd fires
+scripts/launchd.sh logs [N]                          # tail logs/extract.{out,err}.log
+
+# Mac terminal only (need launchctl)
+scripts/launchd.sh install     # register the job (one-time; re-run after plist changes)
+scripts/launchd.sh run-now     # launchctl kickstart
 scripts/launchd.sh status      # load state / last exit code / pid
-scripts/launchd.sh logs [N]    # tail logs (default 40 lines) -> logs/extract.{out,err}.log
 scripts/launchd.sh uninstall
 ```
+
+`extract.sh` never writes `.dispatch-trigger` (that would re-fire WatchPaths and loop); it reads
+it only when invoked with `--from-trigger`, so manual runs are unaffected by stale trigger content.
 
 **Status dashboard (live artifact):** `scripts/status.py` emits JSON for every `com.troyscott.*`
 launchd job (load state, last exit code, last run, log tail) plus the latest workout summary.
 `scripts/dashboard.sh` injects that JSON into `scripts/dashboard.html` and writes a self-contained
 `logs/dashboard.html` — open it, send it to the phone, or surface it as a Cowork live artifact.
-Re-run `dashboard.sh` (via Dispatch) to refresh; the artifact displays, Dispatch executes.
+`extract.sh` re-renders the dashboard at the end of every run, so Dispatch just reads the file
+(`dashboard.sh`/`status.py` themselves need `launchctl`, so they only run on the Mac).
 
-**Phone recipe:** dispatch something like *"In virtualgym-agent, run `scripts/launchd.sh run-now`,
-then `scripts/launchd.sh logs` until it prints Done!, and send me `images/workout_<date>_ig.png`."*
+**Phone recipe:** dispatch something like *"In virtualgym-agent, run `scripts/launchd.sh trigger`,
+then `scripts/launchd.sh logs` until it prints Done!, then **attach the file**
+`images/workout_<date>_ig.png` so it appears in Outputs (share the actual file, not just a
+description)."* The explicit "attach the file" matters — Dispatch only surfaces files the agent
+actively shares, so narrating "here's your image" without attaching leaves Outputs empty.
 
 Requirements: the Mac mini stays awake/networked and Claude Desktop is running and signed in. If the
 Google session ever dies, the headless run can't solve the login unattended — re-run

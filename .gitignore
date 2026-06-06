@@ -14,8 +14,11 @@ images/*
 # launchd job logs
 logs/
 
-# Dispatch trigger file (launchd WatchPaths target)
-.dispatch-trigger
+# Dispatch trigger file (launchd WatchPaths target) + dedup state
+.dispatch-trigger*
+
+# Single-run lock dir (atomic mkdir lock)
+/.extract.lock
 
 # Fonts tracked in repo (Poppins, OFL licensed)
 

@@ -4,6 +4,8 @@
 
 Automated workout extraction from VirtuaGym Activity Calendar using Vercel's `agent-browser` CLI. Generates structured JSON, text reports, and Instagram-ready images (1080x1350).
 
+> For the system design, data flow, and the rationale behind key decisions (persistent CDP profile, WatchPaths trigger, sandbox/mount constraints, delivery), see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Project Structure
 
 ```

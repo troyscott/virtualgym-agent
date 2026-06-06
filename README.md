@@ -116,7 +116,12 @@ scripts/launchd.sh install     # register the on-demand launchd job (one-time)
 scripts/launchd.sh run-now     # trigger it; logs -> logs/extract.{out,err}.log
 scripts/launchd.sh status      # load state / last exit code
 scripts/launchd.sh logs        # tail recent output
+scripts/dashboard.sh           # render logs/dashboard.html status dashboard (live artifact)
 ```
+
+`scripts/status.py` emits JSON for every `com.troyscott.*` launchd job plus the latest workout
+summary; `scripts/dashboard.sh` injects it into a self-contained HTML dashboard you can view, send to
+your phone, or surface as a Cowork live artifact.
 
 The script will:
 1. Load saved auth and open the VirtuaGym Activity Calendar

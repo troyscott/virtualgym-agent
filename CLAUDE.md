@@ -70,6 +70,38 @@ Config lives in `config.json` (committed, no secrets); resolution is env var > `
 default. Keys: `CHROME_BIN`, `CHROME_PROFILE_DIR` (default `~/.virtuagym-chrome`), `CDP_PORT`
 (default `9222`), plus the VirtuaGym URLs / Google account.
 
+## Running from iPhone (Cowork Dispatch)
+
+Dispatch executes **on this Mac mini** (the phone is just the remote control), so it has full
+access to the local Chrome profile and `localhost:9222` — unlike cloud agents/routines, which are
+isolated and cannot run this workflow.
+
+`extract.sh` is the single command both the phone and launchd use:
+
+```bash
+./extract.sh            # most recent workout (default)
+./extract.sh today
+./extract.sh 2026-06-05
+```
+
+The extraction is registered as an **on-demand launchd job** (no timer) so it can be triggered and
+monitored via `launchctl` — the natural surface for Dispatch and for a status artifact:
+
+```bash
+scripts/launchd.sh install     # register the job (one-time)
+scripts/launchd.sh run-now     # trigger an extraction (launchctl kickstart)
+scripts/launchd.sh status      # load state / last exit code / pid
+scripts/launchd.sh logs [N]    # tail logs (default 40 lines) -> logs/extract.{out,err}.log
+scripts/launchd.sh uninstall
+```
+
+**Phone recipe:** dispatch something like *"In virtualgym-agent, run `scripts/launchd.sh run-now`,
+then `scripts/launchd.sh logs` until it prints Done!, and send me `images/workout_<date>_ig.png`."*
+
+Requirements: the Mac mini stays awake/networked and Claude Desktop is running and signed in. If the
+Google session ever dies, the headless run can't solve the login unattended — re-run
+`python browser_session.py --login` once at the machine.
+
 ## Extraction Workflow
 
 The `extract_workout.py` script automates the full pipeline:

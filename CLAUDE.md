@@ -115,16 +115,18 @@ launchd job (load state, last exit code, last run, log tail) plus the latest wor
 `extract.sh` re-renders the dashboard at the end of every run, so Dispatch just reads the file
 (`dashboard.sh`/`status.py` themselves need `launchctl`, so they only run on the Mac).
 
-**Image delivery:** on success `extract.sh` copies the IG image to a stable `images/latest_ig.png`
+**Image delivery:** on success `extract.sh` copies the IG image to **`outputs/`** (git-tracked folder,
+visible in the Dispatch repo mount → agent attaches `outputs/latest_ig.png` to the Outputs panel)
 **and** to `~/Dropbox/virtuagym/` (override `VIRTUAGYM_DROPBOX_DIR`). Dropbox is the guaranteed channel
-(view via the Dropbox app/connector), independent of Dispatch's file-sharing.
+(view via the Dropbox app/connector), independent of Dispatch's file-sharing. `outputs/` is tracked via
+`.gitkeep`; its images are gitignored.
 
 **Trigger de-dup:** one `.dispatch-trigger` write emits several FSEvents; `extract.sh --from-trigger`
 fingerprints the trigger (mtime + content via `.dispatch-trigger.processed`) and skips duplicate fires,
 plus a `.extract.lock` mkdir lock prevents overlapping runs. One write → exactly one extraction.
 
 **Phone recipe:** dispatch something like *"In virtualgym-agent, run `scripts/launchd.sh trigger`,
-then `scripts/launchd.sh logs` until it prints Done!, then **attach the file** `images/latest_ig.png`
+then `scripts/launchd.sh logs` until it prints Done!, then **attach the file** `outputs/latest_ig.png`
 so it appears in Outputs (share the actual file, not just a description)."* The explicit "attach the
 file" matters — Dispatch only surfaces files the agent actively shares; narrating "here's your image"
 leaves Outputs empty. Fallback: pull the image from the Dropbox `virtuagym/` folder.

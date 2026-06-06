@@ -85,25 +85,57 @@ def _run(cmd, timeout=30, critical=False):
     return result.stdout.strip()
 
 
-def cdp_ready(port=DEBUG_PORT):
-    """True if a Chrome CDP endpoint is listening on the given port."""
+def _cdp_version(port=DEBUG_PORT):
+    """Return the /json/version payload, or None if nothing is listening."""
     try:
         with urllib.request.urlopen(
             f"http://localhost:{port}/json/version", timeout=2
         ) as resp:
-            return resp.status == 200
-    except (urllib.error.URLError, OSError):
-        return False
+            if resp.status == 200:
+                return json.loads(resp.read().decode())
+    except (urllib.error.URLError, OSError, json.JSONDecodeError):
+        pass
+    return None
+
+
+def cdp_ready(port=DEBUG_PORT):
+    """True if a Chrome CDP endpoint is listening on the given port."""
+    return _cdp_version(port) is not None
+
+
+def _running_is_headless(port=DEBUG_PORT):
+    """True if the Chrome currently on the port is a headless instance."""
+    info = _cdp_version(port)
+    return bool(info) and "Headless" in info.get("User-Agent", "")
+
+
+def _kill_chrome():
+    """Terminate the dedicated-profile Chrome and free the debug port."""
+    _run("agent-browser close --all")
+    subprocess.run(
+        ["pkill", "-f", f"user-data-dir={PROFILE_DIR}"],
+        capture_output=True,
+    )
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        if not cdp_ready(DEBUG_PORT):
+            return
+        time.sleep(0.5)
 
 
 def launch_chrome(headless=True, url=None):
     """Launch the dedicated Chrome profile with remote debugging enabled.
 
     Detached so it survives this process; polls until the CDP port is ready.
-    No-op (returns True) if an instance is already listening on DEBUG_PORT.
+    Reuses an existing instance only if it matches the requested headless mode;
+    otherwise kills it and relaunches (so --login always gets a visible window).
     """
     if cdp_ready(DEBUG_PORT):
-        return True
+        if _running_is_headless(DEBUG_PORT) == headless:
+            return True
+        want = "headless" if headless else "headed"
+        print(f"Existing Chrome is the wrong mode; relaunching {want}.")
+        _kill_chrome()
 
     os.makedirs(PROFILE_DIR, exist_ok=True)
     args = [
@@ -196,18 +228,7 @@ def ensure_connected():
         return
 
     print("No active VirtuaGym session — opening a window for one-time login.")
-    # Close the headless instance so we can reopen the same profile headed.
-    _run("agent-browser close")
-    if cdp_ready(DEBUG_PORT):
-        # Headless Chrome still holding the port/profile; ask it to quit.
-        try:
-            urllib.request.urlopen(
-                f"http://localhost:{DEBUG_PORT}/json/close", timeout=2
-            )
-        except (urllib.error.URLError, OSError):
-            pass
-        time.sleep(2)
-
+    # launch_chrome detects the headless instance and relaunches headed.
     launch_chrome(headless=False, url=SIGNIN_URL)
     connect()
     if not _wait_for_login():

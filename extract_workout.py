@@ -79,7 +79,12 @@ def get_value(ref):
 
 
 def js_eval(code):
-    return run(f"agent-browser eval --stdin <<'EVALEOF'\n{code}\nEVALEOF")
+    # Wrap in an IIFE so top-level `const`/`let` are scoped per call. agent-browser
+    # evaluates in a persistent context, so bare top-level declarations would
+    # collide ("Identifier already declared") on repeated calls. The code body
+    # must `return` its value.
+    wrapped = "(() => {\n" + code + "\n})()"
+    return run(f"agent-browser eval --stdin <<'EVALEOF'\n{wrapped}\nEVALEOF")
 
 
 def navigate_to_date(target_date):
@@ -131,7 +136,7 @@ def navigate_to_date(target_date):
         }}
       }}
     }}
-    JSON.stringify({{clicked}});
+    return {{clicked}};
     """
     result = js_eval(js)
     print(f"Clicked date {target_date.strftime('%B %d')}: {result}")
@@ -445,11 +450,15 @@ def find_last_workout_date():
         });
       }
     }
-    JSON.stringify(results);
+    return results;
     """
     result = js_eval(js)
     try:
         days_info = json.loads(result)
+        # agent-browser pretty-prints raw return values; a stringified result
+        # (legacy) decodes to a str and needs a second pass.
+        if isinstance(days_info, str):
+            days_info = json.loads(days_info)
     except (json.JSONDecodeError, TypeError):
         days_info = []
 
@@ -487,7 +496,7 @@ def find_last_workout_date():
             }}
           }}
         }}
-        JSON.stringify({{clicked: true}});
+        return {{clicked: true}};
         """
         js_eval(test_js)
         run("agent-browser wait 2000")

@@ -3,9 +3,11 @@
 # Thin wrapper so the phone (Cowork Dispatch) and launchd can run the
 # extraction with a single, environment-independent command:
 #
-#     ./extract.sh            # most recent workout (default)
+#     ./extract.sh                  # most recent workout (default)
 #     ./extract.sh today
 #     ./extract.sh 2026-06-05
+#     ./extract.sh --from-trigger   # launchd WatchPaths entry point: read the
+#                                   # date arg from .dispatch-trigger
 #
 set -euo pipefail
 
@@ -25,4 +27,21 @@ if [ ! -x "$PYTHON" ]; then
     exit 1
 fi
 
-exec "$PYTHON" extract_workout.py "${1:-last}"
+# Resolve the date argument. --from-trigger (the launchd WatchPaths job) reads
+# it from .dispatch-trigger so the Cowork sandbox can pass a date by writing
+# the file. READ-ONLY here: writing the trigger from this script would re-fire
+# WatchPaths and loop.
+ARG="${1:-last}"
+if [ "$ARG" = "--from-trigger" ]; then
+    ARG="$(head -n1 .dispatch-trigger 2>/dev/null | xargs || true)"
+    ARG="${ARG:-last}"
+fi
+
+rc=0
+"$PYTHON" extract_workout.py "$ARG" || rc=$?
+
+# Refresh the status dashboard (best-effort) so Dispatch can read a current
+# logs/dashboard.html without needing launchctl.
+scripts/dashboard.sh >/dev/null 2>&1 || true
+
+exit "$rc"

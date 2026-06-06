@@ -106,22 +106,37 @@ python3 extract_workout.py "Mar 21"
 
 ### Run from your phone (Cowork Dispatch)
 
-`extract.sh` wraps the command so it works from a single entry point, and the extraction can be
-registered as an on-demand launchd job and triggered/monitored via `launchctl` — ideal for Cowork
-Dispatch, which runs locally on the Mac and so can reach the Chrome profile + `localhost:9222`:
+Cowork Dispatch runs in a **sandboxed Linux VM** — no `launchctl`, no macOS binaries, and
+`localhost:9222` is blocked — but it has a **read/write mount of this repo**. The bridge is launchd's
+`WatchPaths`: the on-demand job watches `.dispatch-trigger`, so writing that file (which the sandbox
+can do through the mount) fires `extract.sh` **natively on the Mac**, where Chrome lives.
 
-```bash
-./extract.sh                   # most recent workout
-scripts/launchd.sh install     # register the on-demand launchd job (one-time)
-scripts/launchd.sh run-now     # trigger it; logs -> logs/extract.{out,err}.log
-scripts/launchd.sh status      # load state / last exit code
-scripts/launchd.sh logs        # tail recent output
-scripts/dashboard.sh           # render logs/dashboard.html status dashboard (live artifact)
+```
+phone → Dispatch (sandbox) → write .dispatch-trigger → launchd (Mac) → extract.sh → outputs + logs via mount
 ```
 
-`scripts/status.py` emits JSON for every `com.troyscott.*` launchd job plus the latest workout
-summary; `scripts/dashboard.sh` injects it into a self-contained HTML dashboard you can view, send to
-your phone, or surface as a Cowork live artifact.
+`scripts/launchd.sh` subcommands, by where they can run:
+
+```bash
+# Sandbox-safe (pure file I/O — works from Cowork Dispatch)
+scripts/launchd.sh trigger [last|today|YYYY-MM-DD]   # write .dispatch-trigger -> launchd fires
+scripts/launchd.sh logs [N]                          # tail logs/extract.{out,err}.log
+
+# Mac terminal only (need launchctl)
+scripts/launchd.sh install     # register the on-demand job (one-time; re-run after plist changes)
+scripts/launchd.sh run-now     # launchctl kickstart
+scripts/launchd.sh status      # load state / last exit code / pid
+scripts/launchd.sh uninstall
+```
+
+`extract.sh` re-renders `logs/dashboard.html` at the end of every run (`scripts/status.py` +
+`scripts/dashboard.sh`, which themselves need `launchctl` so they only run on the Mac), so Dispatch
+can read a current status dashboard straight from the mount.
+
+**Phone recipe:** *"In virtualgym-agent, run `scripts/launchd.sh trigger`, then `scripts/launchd.sh
+logs` until it prints Done!, then **attach the file** `images/workout_<date>_ig.png` so it appears in
+Outputs (share the actual file, not just a description)."* The explicit "attach the file" matters —
+Dispatch only surfaces files the agent actively shares.
 
 The script will:
 1. Load saved auth and open the VirtuaGym Activity Calendar

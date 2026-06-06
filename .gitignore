@@ -11,6 +11,10 @@ data/*
 images/*
 !images/.gitkeep
 
+# Stable delivery folder for Dispatch (tracked dir, ignored contents)
+outputs/*
+!outputs/.gitkeep
+
 # launchd job logs
 logs/
 

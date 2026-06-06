@@ -134,17 +134,19 @@ scripts/launchd.sh uninstall
 `scripts/dashboard.sh`, which themselves need `launchctl` so they only run on the Mac), so Dispatch
 can read a current status dashboard straight from the mount.
 
-**Image delivery:** on a successful run `extract.sh` copies the IG image to a stable path
-(`images/latest_ig.png`) **and** to `~/Dropbox/virtuagym/` (override with `VIRTUAGYM_DROPBOX_DIR`).
-The Dropbox copy is the guaranteed channel — view it in the Dropbox app/connector on the phone,
-independent of whether Dispatch can attach files.
+**Image delivery:** on a successful run `extract.sh` copies the IG image to **`outputs/`** (a
+git-tracked folder, so it's visible in the Dispatch repo mount as `outputs/latest_ig.png` for the
+agent to attach to the Outputs panel) **and** to `~/Dropbox/virtuagym/` (override with
+`VIRTUAGYM_DROPBOX_DIR`). The Dropbox copy is the guaranteed channel — view it in the Dropbox
+app/connector on the phone, independent of whether Dispatch can attach files. (`outputs/` is tracked
+via `.gitkeep`; the images inside it are gitignored.)
 
 **Trigger de-duplication:** a single `.dispatch-trigger` write can emit several FSEvents, so
 `extract.sh --from-trigger` fingerprints the trigger (mtime + content) and ignores duplicate fires; a
 mkdir lock also prevents overlapping runs. One write → exactly one extraction.
 
 **Phone recipe:** *"In virtualgym-agent, run `scripts/launchd.sh trigger`, then `scripts/launchd.sh
-logs` until it prints Done!, then **attach the file** `images/latest_ig.png` so it appears in Outputs
+logs` until it prints Done!, then **attach the file** `outputs/latest_ig.png` so it appears in Outputs
 (share the actual file, not just a description)."* The explicit "attach the file" matters — Dispatch
 only surfaces files the agent actively shares. If it still won't surface, grab the image from the
 Dropbox `virtuagym/` folder instead.

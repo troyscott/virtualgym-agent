@@ -76,12 +76,18 @@ fi
 rc=0
 "$PYTHON" extract_workout.py "$ARG" || rc=$?
 
-# Deliver the freshest IG image to a stable path + Dropbox so the phone can
-# always retrieve it (best-effort — never fail the run on a copy error).
+# Deliver the freshest IG image so the phone can always retrieve it (best-effort
+# — never fail the run on a copy error). Two channels:
+#   1. outputs/ — a git-tracked folder, so it's visible in the Dispatch repo
+#      mount; the agent attaches outputs/latest_ig.png to the Outputs panel.
+#   2. ~/Dropbox/virtuagym/ — guaranteed channel, viewable in the Dropbox app.
 if [ "$rc" -eq 0 ]; then
     newest="$(ls -t images/workout_*_ig.png 2>/dev/null | head -1 || true)"
     if [ -n "$newest" ]; then
-        cp -f "$newest" images/latest_ig.png 2>/dev/null || true
+        mkdir -p outputs 2>/dev/null || true
+        cp -f "$newest" "outputs/$(basename "$newest")" 2>/dev/null || true
+        cp -f "$newest" outputs/latest_ig.png 2>/dev/null || true
+
         dropbox_dir="${VIRTUAGYM_DROPBOX_DIR:-$HOME/Dropbox/virtuagym}"
         if [ -d "$HOME/Dropbox" ]; then
             mkdir -p "$dropbox_dir" 2>/dev/null || true

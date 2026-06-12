@@ -10,7 +10,7 @@
 #                                   # date arg from .dispatch-trigger
 #
 # On success it copies the generated IG image to a stable path
-# (images/latest_ig.png) and to ~/Dropbox/virtuagym/ so it can be retrieved
+# (outputs/latest_ig.png) and to ~/Dropbox/virtuagym/ so it can be retrieved
 # from the phone regardless of Dispatch's file-sharing.
 #
 set -euo pipefail

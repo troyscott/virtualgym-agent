@@ -9,44 +9,50 @@ Automated workout extraction from VirtuaGym Activity Calendar using Vercel's `ag
 ## Project Structure
 
 ```
-workouts/
-├── requirements.txt          # Python dependencies (pip)
-├── extract_workout.py        # Main extraction script (run this)
+virtualgym-agent/
+├── ARCHITECTURE.md           # System design, data flow, decision rationale
+├── extract.sh                # Single entry point (terminal + launchd); dedup, delivery
+├── extract_workout.py        # Main extraction pipeline
 ├── browser_session.py        # Persistent Chrome profile + CDP connect/login
 ├── generate_ig_workout.py    # Pillow-based IG image generator
+├── config.json               # Browser/VirtuaGym settings (committed, no secrets)
+├── requirements.txt          # Python dependencies (pip)
+├── scripts/
+│   ├── launchd.sh            # LaunchAgent manager (install/run-now/trigger/status/logs)
+│   ├── status.py             # JSON status for com.troyscott.* jobs + latest workout
+│   └── dashboard.{html,sh}   # Live-artifact status dashboard -> logs/dashboard.html
 ├── fonts/                    # Poppins font files
-├── data/                     # JSON + text reports
-│   ├── workout_YYYY-MM-DD.json
-│   └── workout_YYYY-MM-DD_report.txt
-├── images/                   # Generated Instagram images
-│   └── workout_YYYY-MM-DD_ig.png
-└── prompts/                  # Archived Cowork/Chrome MCP prompts
+├── data/                     # JSON + text reports (gitignored)
+├── images/                   # Generated Instagram images (gitignored)
+├── outputs/                  # Delivery folder for Dispatch (tracked dir, ignored contents)
+└── logs/                     # launchd job logs + dashboard.html (gitignored)
 ```
 
 ## Python Environment
 
-Uses micromamba with the `workout` env at `~/.local/share/mamba/envs/workout`.
+Uses micromamba with the `workout` env at `/opt/homebrew/Cellar/micromamba/2.5.0_4/envs/workout`
+(Homebrew Cellar path — it moves on micromamba upgrades; `extract.sh` hardcodes it but honors a
+`WORKOUT_PYTHON` env override pointing at the env's `python`).
 
 ```bash
 micromamba create -n workout python=3.12 -c conda-forge -y
-micromamba activate workout
-pip install -r requirements.txt
+micromamba run -n workout pip install -r requirements.txt
+
+# Run scripts via the env without activating:
+micromamba run -n workout python extract_workout.py last
 ```
 
 ## Quick Start
 
 ```bash
-micromamba activate workout
+# Simplest: the wrapper resolves the env python and PATH itself
+./extract.sh                  # most recent workout (default)
+./extract.sh today
+./extract.sh 2026-03-21
 
-# Extract today's workout (default)
-python3 extract_workout.py
-
-# Extract the most recent workout on the calendar
-python3 extract_workout.py last
-
-# Extract a specific date
-python3 extract_workout.py 2026-03-21
-
+# Or call the pipeline directly via the env
+micromamba run -n workout python extract_workout.py        # today (default)
+micromamba run -n workout python extract_workout.py last
 # Other formats: today, yesterday, "Mar 21", "3/21"
 ```
 
@@ -173,12 +179,12 @@ No weight:               volume = 0
 {
   "workout_date": "YYYY-MM-DD",
   "day_of_week": "DayName",
-  "workout_title": "Troy Scott AV – X – Name",
-  "total_exercises": 12,
+  "workout_title": "Troy Scott AX - 1 - Squat/Pull",
+  "total_exercises": 14,
   "extraction_timestamp": "ISO-8601",
   "source": "thriveandconquer.virtuagym.com",
-  "activity": { "name": "Steps", "value": 12944, "unit": "steps", "duration": "HH:MM:SS", "calories": 614 },
-  "additional_activities": [{ "name": "Activity", "duration": "HH:MM:SS", "calories": 205 }],
+  "activity": null,
+  "additional_activities": [],
   "exercises": [{
     "order": 1, "name": "Exercise Name", "type": "warmup", "category": "activation",
     "exercise_mode": "repetition-based",
@@ -186,23 +192,32 @@ No weight:               volume = 0
     "total_calories": 7
   }],
   "summary": {
-    "total_workout_calories": 278, "total_with_steps": 892,
-    "warmup_count": 5, "strength_count": 2, "conditioning_count": 5,
-    "total_volume_lbs": 10155, "volume_breakdown": { "Exercise": 3660 }
+    "total_workout_calories": 222, "total_with_steps": 222,
+    "steps_calories": 0, "additional_activity_calories": 0,
+    "warmup_count": 5, "strength_count": 2, "conditioning_count": 7,
+    "total_volume_lbs": 4258, "volume_breakdown": { "Exercise": 3060 },
+    "volume_note": "Time-based exercises use seconds as reps per VirtuaGym"
   }
 }
 ```
 
 - Time-based sets: `"reps": null, "duration": "40s"`
 - Rep-based sets: `"reps": 10, "duration": null`
+- `activity` is currently always `null` — "Steps" comes through as exercise 1 (with no sets); the
+  reserved `activity`/`additional_activities` fields are kept for future use
+- VirtuaGym session activity rows (names starting `"Fitness,"`) are dropped during extraction —
+  they have no detail panel and would duplicate the previous exercise's sets (see #23)
 
 ## Workout Rotation
 
 Two alternating programs, typically 2-3x/week:
 
-**AV-1 Squat/Pull**: Dead bug, Scapular pull up, Side pivot, Horizontal row exorotation, Sumo squat stretch > Squat (Barbell), Hammer curl (DBs) > Step up high (DBs), Bent-over row (DBs), Crunch crossed toe touch, Rowing machine, Wall ball (MB)
+**AX-1 Squat/Pull**: Dead bug, Scapular pull up (Rig), Side pivot (MRB), Horizontal row exorotation (EBs), Sumo squat stretch rotation > Squat (Barbell) > Plank jacks (Flowin), Assisted standing pull up wide grip, Split front squat L/R (Barbell), Squat to hammer curl (DBs), Wide back row (ST), Slam ball (MB)
 
-**AV-2 Press/Hinge**: Neck pull (EB), Hand walk plyo pushup, Pallof press R/L (Pulley), Goodmorning > Bench press wide grip (Barbell), Deadlift stiffed legs (DBs) > Push-up incline (PB), Swing (KB), Sit-up overhead throw (Wall MB), Assault bike, Push press alternated (LM)
+**AX-2 Press/Hinge**: Neck pull (EB), Hand walk plyo pushup, Pallof press R/L (Pulley) > Goodmorning, Bench press wide grip (Barbell) > Knee raise side (Captains chair), Assisted dipping machine, Stiff legged deadlift (Barbell), Side raise seated (DBs), Hang clean press L/R (KB), Forward push (Sled)
+
+(Earlier AV-1/AV-2 programs are retired; "Steps" appears as entry 1 on every workout as the day's
+step-count activity.)
 
 ## Troubleshooting
 

@@ -22,18 +22,20 @@ Works standalone via CLI, or integrated with Claude Channels, OpenClaw, and othe
 
 ### 1. Python environment (micromamba)
 
-Create and activate the `workout` environment:
+Create the `workout` environment and install dependencies:
 
 ```bash
 micromamba create -n workout python=3.12 -c conda-forge -y
-micromamba activate workout
-pip install -r requirements.txt
+micromamba run -n workout pip install -r requirements.txt
 ```
 
-The environment lives at `~/.local/share/mamba/envs/workout`. Activate it before running any scripts:
+With Homebrew micromamba the env lives under the Cellar (e.g.
+`/opt/homebrew/Cellar/micromamba/<version>/envs/workout`) — note this path moves on micromamba
+upgrades. `extract.sh` resolves the env's python itself and honors a `WORKOUT_PYTHON` override if
+yours lives elsewhere. To run scripts directly:
 
 ```bash
-micromamba activate workout
+micromamba run -n workout python extract_workout.py last
 ```
 
 ### 2. Install agent-browser
@@ -170,25 +172,31 @@ The script will:
 ## Project Structure
 
 ```
-workouts/
+virtualgym-agent/
 ├── README.md                 # This file
 ├── CLAUDE.md                 # Claude Code project context
-├── requirements.txt          # Python dependencies (pip)
-├── extract_workout.py        # Main extraction script (agent-browser)
+├── ARCHITECTURE.md           # System design, data flow, decision rationale
+├── extract.sh                # Single entry point (terminal + launchd); dedup, delivery
+├── extract_workout.py        # Main extraction pipeline (agent-browser)
 ├── browser_session.py        # Persistent Chrome profile + CDP connect/login
 ├── generate_ig_workout.py    # Pillow-based IG image generator
+├── config.json               # Browser/VirtuaGym settings (committed, no secrets)
+├── requirements.txt          # Python dependencies (pip)
+├── scripts/                  # launchd.sh, status.py, dashboard.{html,sh}
 ├── fonts/                    # Poppins font files for image generation
 ├── data/                     # JSON reports and text summaries (gitignored)
-└── images/                   # Generated Instagram images (gitignored)
+├── images/                   # Generated Instagram images (gitignored)
+├── outputs/                  # Delivery folder for Dispatch (tracked dir, ignored contents)
+└── logs/                     # launchd job logs + dashboard.html (gitignored)
 ```
 
 ## Workout Programs
 
 Two alternating programs, typically 2-3x/week:
 
-- **AV-1 Squat/Pull**: Dead bug, Scapular pull up, Side pivot, Horizontal row exorotation, Sumo squat stretch > Squat (Barbell), Hammer curl (DBs) > Step up high (DBs), Bent-over row (DBs), Crunch crossed toe touch, Rowing machine, Wall ball (MB)
+- **AX-1 Squat/Pull**: Dead bug, Scapular pull up (Rig), Side pivot (MRB), Horizontal row exorotation (EBs), Sumo squat stretch rotation > Squat (Barbell) > Plank jacks (Flowin), Assisted standing pull up wide grip, Split front squat L/R (Barbell), Squat to hammer curl (DBs), Wide back row (ST), Slam ball (MB)
 
-- **AV-2 Press/Hinge**: Neck pull (EB), Hand walk plyo pushup, Pallof press R/L (Pulley), Goodmorning > Bench press wide grip (Barbell), Deadlift stiffed legs (DBs) > Push-up incline (PB), Swing (KB), Sit-up overhead throw (Wall MB), Assault bike, Push press alternated (LM)
+- **AX-2 Press/Hinge**: Neck pull (EB), Hand walk plyo pushup, Pallof press R/L (Pulley) > Goodmorning, Bench press wide grip (Barbell) > Knee raise side (Captains chair), Assisted dipping machine, Stiff legged deadlift (Barbell), Side raise seated (DBs), Hang clean press L/R (KB), Forward push (Sled)
 
 ## Volume Calculation
 
